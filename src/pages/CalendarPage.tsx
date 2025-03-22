@@ -1,19 +1,19 @@
 
 import { PageTransition } from "@/components/layout/PageTransition";
-import { Dashboard } from "@/components/dashboard/Dashboard";
+import { CalendarView } from "@/components/calendar/Calendar";
 import { Navbar } from "@/components/layout/Navbar";
 
-const Index = () => {
+const CalendarPage = () => {
   return (
     <>
       <Navbar />
       <main className="container py-8">
         <PageTransition>
-          <Dashboard />
+          <CalendarView />
         </PageTransition>
       </main>
     </>
   );
 };
 
-export default Index;
+export default CalendarPage;
