@@ -1,5 +1,4 @@
-
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useTasks, TaskCategory } from "@/context/TaskContext";
@@ -12,6 +11,33 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalendarDays, CheckSquare, Clock, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
 
 // Task category configuration
 const taskCategories: { id: TaskCategory; label: string; color: string }[] = [
@@ -24,7 +50,14 @@ const taskCategories: { id: TaskCategory; label: string; color: string }[] = [
 
 export const Dashboard: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
-  const { tasks } = useTasks();
+  const { tasks, addTask } = useTasks();
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newTask, setNewTask] = useState({
+    title: "",
+    description: "",
+    category: "work" as TaskCategory,
+    dueDate: undefined as Date | undefined,
+  });
 
   // Calculate task statistics
   const totalTasks = tasks.length;
@@ -56,6 +89,25 @@ export const Dashboard: React.FC = () => {
   const itemVariants = {
     hidden: { y: 20, opacity: 0 },
     visible: { y: 0, opacity: 1 }
+  };
+
+  const handleCreateTask = () => {
+    addTask({
+      title: newTask.title,
+      description: newTask.description,
+      category: newTask.category,
+      completed: false,
+      dueDate: newTask.dueDate,
+    });
+    
+    setNewTask({
+      title: "",
+      description: "",
+      category: "work",
+      dueDate: undefined,
+    });
+    
+    setIsCreateDialogOpen(false);
   };
 
   if (!isAuthenticated) {
@@ -232,12 +284,117 @@ export const Dashboard: React.FC = () => {
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <CardTitle>Recent Tasks</CardTitle>
-                  <Button asChild size="sm">
-                    <Link to="/tasks">
-                      <span className="sm:hidden">All</span>
-                      <span className="hidden sm:inline">View All Tasks</span>
-                    </Link>
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button size="sm">
+                          <Plus size={16} className="mr-2" />
+                          <span className="hidden sm:inline">New Task</span>
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                          <DialogTitle>Create New Task</DialogTitle>
+                          <DialogDescription>
+                            Add a new task to your list. Fill out the details below.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="task-title">Task Title</Label>
+                            <Input
+                              id="task-title"
+                              placeholder="Enter task title"
+                              value={newTask.title}
+                              onChange={(e) =>
+                                setNewTask({ ...newTask, title: e.target.value })
+                              }
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor="task-description">Description (Optional)</Label>
+                            <Textarea
+                              id="task-description"
+                              placeholder="Add details about this task"
+                              value={newTask.description}
+                              onChange={(e) =>
+                                setNewTask({ ...newTask, description: e.target.value })
+                              }
+                              className="resize-none"
+                            />
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="task-category">Category</Label>
+                              <Select
+                                value={newTask.category}
+                                onValueChange={(value: TaskCategory) =>
+                                  setNewTask({ ...newTask, category: value })
+                                }
+                              >
+                                <SelectTrigger id="task-category">
+                                  <SelectValue placeholder="Select category" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="work">Work</SelectItem>
+                                  <SelectItem value="personal">Personal</SelectItem>
+                                  <SelectItem value="study">Study</SelectItem>
+                                  <SelectItem value="health">Health</SelectItem>
+                                  <SelectItem value="other">Other</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <Label>Due Date (Optional)</Label>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    className="w-full justify-start text-left font-normal"
+                                  >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {newTask.dueDate ? (
+                                      format(newTask.dueDate, "PPP")
+                                    ) : (
+                                      <span>Pick a date</span>
+                                    )}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                  <Calendar
+                                    mode="single"
+                                    selected={newTask.dueDate}
+                                    onSelect={(date) =>
+                                      setNewTask({ ...newTask, dueDate: date })
+                                    }
+                                    initialFocus
+                                    className="p-3 pointer-events-auto"
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button 
+                            onClick={handleCreateTask} 
+                            disabled={!newTask.title}
+                          >
+                            Create Task
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                    <Button asChild size="sm">
+                      <Link to="/tasks">
+                        <span className="sm:hidden">All</span>
+                        <span className="hidden sm:inline">Tasks Accomplished</span>
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
                 <CardDescription>
                   Your latest tasks across all categories
@@ -294,6 +451,104 @@ export const Dashboard: React.FC = () => {
           </TabsContent>
         </Tabs>
       </motion.div>
+
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Create New Task</DialogTitle>
+            <DialogDescription>
+              Add a new task to your list. Fill out the details below.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="task-title">Task Title</Label>
+              <Input
+                id="task-title"
+                placeholder="Enter task title"
+                value={newTask.title}
+                onChange={(e) =>
+                  setNewTask({ ...newTask, title: e.target.value })
+                }
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="task-description">Description (Optional)</Label>
+              <Textarea
+                id="task-description"
+                placeholder="Add details about this task"
+                value={newTask.description}
+                onChange={(e) =>
+                  setNewTask({ ...newTask, description: e.target.value })
+                }
+                className="resize-none"
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="task-category">Category</Label>
+                <Select
+                  value={newTask.category}
+                  onValueChange={(value: TaskCategory) =>
+                    setNewTask({ ...newTask, category: value })
+                  }
+                >
+                  <SelectTrigger id="task-category">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="work">Work</SelectItem>
+                    <SelectItem value="personal">Personal</SelectItem>
+                    <SelectItem value="study">Study</SelectItem>
+                    <SelectItem value="health">Health</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Due Date (Optional)</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {newTask.dueDate ? (
+                        format(newTask.dueDate, "PPP")
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={newTask.dueDate}
+                      onSelect={(date) =>
+                        setNewTask({ ...newTask, dueDate: date })
+                      }
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              onClick={handleCreateTask} 
+              disabled={!newTask.title}
+            >
+              Create Task
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 };
