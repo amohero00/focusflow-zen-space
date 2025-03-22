@@ -29,36 +29,6 @@ type TaskContextType = {
 // Create context
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
 
-// Sample initial tasks
-const generateSampleTasks = (userId: string): Task[] => [
-  {
-    id: "1",
-    title: "Complete project proposal",
-    description: "Finish the Q3 marketing project proposal",
-    category: "work",
-    completed: false,
-    dueDate: new Date(Date.now() + 86400000 * 2), // 2 days from now
-    createdAt: new Date(),
-    userId
-  },
-  {
-    id: "2",
-    title: "Grocery shopping",
-    category: "personal",
-    completed: true,
-    createdAt: new Date(Date.now() - 86400000), // 1 day ago
-    userId
-  },
-  {
-    id: "3",
-    title: "Morning run",
-    category: "health",
-    completed: false,
-    createdAt: new Date(),
-    userId
-  }
-];
-
 export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -86,10 +56,9 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         setTasks(parsedTasks);
       } else {
-        // Create sample tasks for new users
-        const sampleTasks = generateSampleTasks(user.id);
-        setTasks(sampleTasks);
-        saveTasks(sampleTasks, user.id);
+        // Initialize with empty tasks array for new users
+        setTasks([]);
+        saveTasks([], user.id);
       }
       
       setIsLoading(false);
