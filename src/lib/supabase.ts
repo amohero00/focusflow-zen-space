@@ -87,11 +87,13 @@ export type Database = {
 };
 
 // Create a single supabase client for interacting with your database
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+// Use environment variables with fallback values for development
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://xyzcompany.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh5emNvbXBhbnkiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTYwMDAwMDAwMCwiZXhwIjoxNjAwMDAwMDAwfQ.MEIYYcPbA-0GiZSTrXvwefnmEGKvDPpP_iRBEKqi7jg';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error("Supabase credentials missing. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment variables.");
+// Log a warning but don't prevent app from loading
+if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+  console.warn("Supabase credentials are using fallback values. For production, please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment variables.");
 }
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
