@@ -1,6 +1,8 @@
 
 import React, { createContext, useState, useContext, useEffect, useRef } from "react";
 import { useAuth } from "./AuthContext";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 
 // Types
 export type PomodoroSession = {
@@ -22,9 +24,9 @@ type PomodoroContextType = {
   timeRemaining: number; // in seconds
   activeSessionId: string | null;
   
-  addSession: (session: Omit<PomodoroSession, "id" | "createdAt" | "userId">) => void;
-  updateSession: (id: string, updates: Partial<Omit<PomodoroSession, "id" | "userId">>) => void;
-  deleteSession: (id: string) => void;
+  addSession: (session: Omit<PomodoroSession, "id" | "createdAt" | "userId">) => Promise<void>;
+  updateSession: (id: string, updates: Partial<Omit<PomodoroSession, "id" | "userId">>) => Promise<void>;
+  deleteSession: (id: string) => Promise<void>;
   setCurrentSession: (sessionId: string) => void;
   startTimer: () => void;
   pauseTimer: () => void;
@@ -66,9 +68,9 @@ export const PomodoroProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   
   const timerRef = useRef<number | null>(null);
 
-  // Load sessions from local storage on mount and when user changes
+  // Load sessions from Supabase on mount and when user changes
   useEffect(() => {
-    const loadSessions = () => {
+    const loadSessions = async () => {
       if (!user) {
         setSessions([]);
         setCurrentSession(null);
@@ -76,40 +78,45 @@ export const PomodoroProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         return;
       }
 
-      const storedSessions = localStorage.getItem(`focusflow_pomodoro_${user.id}`);
-      
-      if (storedSessions) {
-        // Parse dates properly
-        const parsedSessions = JSON.parse(storedSessions, (key, value) => {
-          if (key === 'createdAt') {
-            return new Date(value);
-          }
-          return value;
-        });
+      try {
+        setIsLoading(true);
         
-        setSessions(parsedSessions);
-        
-        // Set the current session to the first one
-        if (parsedSessions.length > 0 && !currentSession) {
-          setCurrentSession(parsedSessions[0]);
-          setTimeRemaining(parsedSessions[0].workDuration * 60);
+        // Get user's sessions from Supabase
+        const { data, error } = await supabase
+          .from('pomodoro_sessions')
+          .select('*')
+          .eq('user_id', user.id);
+          
+        if (error) {
+          throw error;
         }
-      } else {
-        // Create default sessions for new users
-        const initialSessions = defaultSessions.map((session, index) => ({
-          ...session,
-          id: `default-${index + 1}`,
-          createdAt: new Date(),
-          userId: user.id
-        }));
         
-        setSessions(initialSessions);
-        setCurrentSession(initialSessions[0]);
-        setTimeRemaining(initialSessions[0].workDuration * 60);
-        saveSessions(initialSessions, user.id);
+        if (data.length > 0) {
+          // Transform data to match PomodoroSession type
+          const transformedSessions: PomodoroSession[] = data.map(session => ({
+            id: session.id,
+            name: session.name,
+            workDuration: session.work_duration,
+            breakDuration: session.break_duration,
+            createdAt: new Date(session.created_at),
+            userId: session.user_id
+          }));
+          
+          setSessions(transformedSessions);
+          
+          // Set the current session to the first one
+          setCurrentSession(transformedSessions[0]);
+          setTimeRemaining(transformedSessions[0].workDuration * 60);
+        } else {
+          // Create default sessions for new users
+          await createDefaultSessions(user.id);
+        }
+      } catch (error) {
+        console.error("Error loading pomodoro sessions:", error);
+        toast.error("Failed to load pomodoro sessions");
+      } finally {
+        setIsLoading(false);
       }
-      
-      setIsLoading(false);
     };
 
     loadSessions();
@@ -122,9 +129,44 @@ export const PomodoroProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
   }, [user]);
 
-  // Save sessions to local storage
-  const saveSessions = (updatedSessions: PomodoroSession[], userId: string) => {
-    localStorage.setItem(`focusflow_pomodoro_${userId}`, JSON.stringify(updatedSessions));
+  // Create default sessions for new users
+  const createDefaultSessions = async (userId: string) => {
+    try {
+      const sessionsToCreate = defaultSessions.map(session => ({
+        name: session.name,
+        work_duration: session.workDuration,
+        break_duration: session.breakDuration,
+        user_id: userId,
+        created_at: new Date().toISOString()
+      }));
+      
+      const { data, error } = await supabase
+        .from('pomodoro_sessions')
+        .insert(sessionsToCreate)
+        .select();
+        
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        // Transform data to match PomodoroSession type
+        const transformedSessions: PomodoroSession[] = data.map(session => ({
+          id: session.id,
+          name: session.name,
+          workDuration: session.work_duration,
+          breakDuration: session.break_duration,
+          createdAt: new Date(session.created_at),
+          userId: session.user_id
+        }));
+        
+        setSessions(transformedSessions);
+        setCurrentSession(transformedSessions[0]);
+        setTimeRemaining(transformedSessions[0].workDuration * 60);
+      }
+    } catch (error) {
+      console.error("Error creating default pomodoro sessions:", error);
+    }
   };
 
   // Timer logic
@@ -162,60 +204,139 @@ export const PomodoroProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [timerStatus, currentSession]);
 
   // Session operations
-  const addSession = (session: Omit<PomodoroSession, "id" | "createdAt" | "userId">) => {
+  const addSession = async (session: Omit<PomodoroSession, "id" | "createdAt" | "userId">) => {
     if (!user) return;
     
-    const newSession: PomodoroSession = {
-      ...session,
-      id: Date.now().toString(),
-      createdAt: new Date(),
-      userId: user.id
-    };
-    
-    const updatedSessions = [...sessions, newSession];
-    setSessions(updatedSessions);
-    saveSessions(updatedSessions, user.id);
-  };
-
-  const updateSession = (id: string, updates: Partial<Omit<PomodoroSession, "id" | "userId">>) => {
-    if (!user) return;
-    
-    const updatedSessions = sessions.map(session => 
-      session.id === id ? { ...session, ...updates } : session
-    );
-    
-    setSessions(updatedSessions);
-    saveSessions(updatedSessions, user.id);
-    
-    // If the current session is being updated, update it
-    if (currentSession && currentSession.id === id) {
-      const updatedSession = { ...currentSession, ...updates };
-      setCurrentSession(updatedSession);
+    try {
+      setIsLoading(true);
       
-      // If timer is idle, update time remaining based on new work duration
-      if (timerStatus === "idle" || timerStatus === "completed") {
-        setTimeRemaining(updatedSession.workDuration * 60);
+      const newSession = {
+        name: session.name,
+        work_duration: session.workDuration,
+        break_duration: session.breakDuration,
+        user_id: user.id,
+        created_at: new Date().toISOString()
+      };
+      
+      const { data, error } = await supabase
+        .from('pomodoro_sessions')
+        .insert(newSession)
+        .select()
+        .single();
+        
+      if (error) {
+        throw error;
       }
+      
+      // Add to local state
+      const createdSession: PomodoroSession = {
+        id: data.id,
+        name: data.name,
+        workDuration: data.work_duration,
+        breakDuration: data.break_duration,
+        createdAt: new Date(data.created_at),
+        userId: data.user_id
+      };
+      
+      setSessions(prev => [...prev, createdSession]);
+      toast.success("Pomodoro session created successfully");
+    } catch (error) {
+      console.error("Error adding pomodoro session:", error);
+      toast.error("Failed to create pomodoro session");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const deleteSession = (id: string) => {
+  const updateSession = async (id: string, updates: Partial<Omit<PomodoroSession, "id" | "userId">>) => {
+    if (!user) return;
+    
+    try {
+      setIsLoading(true);
+      
+      // Transform updates to match database schema
+      const dbUpdates: any = {};
+      
+      if (updates.name !== undefined) dbUpdates.name = updates.name;
+      if (updates.workDuration !== undefined) dbUpdates.work_duration = updates.workDuration;
+      if (updates.breakDuration !== undefined) dbUpdates.break_duration = updates.breakDuration;
+      if (updates.createdAt !== undefined) dbUpdates.created_at = updates.createdAt.toISOString();
+      
+      const { error } = await supabase
+        .from('pomodoro_sessions')
+        .update(dbUpdates)
+        .eq('id', id)
+        .eq('user_id', user.id);
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Update local state
+      const updatedSessions = sessions.map(session => 
+        session.id === id ? { ...session, ...updates } : session
+      );
+      
+      setSessions(updatedSessions);
+      
+      // If the current session is being updated, update it
+      if (currentSession && currentSession.id === id) {
+        const updatedSession = { ...currentSession, ...updates };
+        setCurrentSession(updatedSession);
+        
+        // If timer is idle, update time remaining based on new work duration
+        if (timerStatus === "idle" || timerStatus === "completed") {
+          setTimeRemaining(updatedSession.workDuration * 60);
+        }
+      }
+      
+      toast.success("Pomodoro session updated successfully");
+    } catch (error) {
+      console.error("Error updating pomodoro session:", error);
+      toast.error("Failed to update pomodoro session");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const deleteSession = async (id: string) => {
     if (!user || sessions.length <= 1) return; // Prevent deleting the last session
     
-    const updatedSessions = sessions.filter(session => session.id !== id);
-    setSessions(updatedSessions);
-    saveSessions(updatedSessions, user.id);
-    
-    // If the current session is being deleted, set the first available session as current
-    if (currentSession && currentSession.id === id) {
-      const newCurrentSession = updatedSessions[0];
-      setCurrentSession(newCurrentSession);
-      setTimeRemaining(newCurrentSession.workDuration * 60);
-      setTimerStatus("idle");
+    try {
+      setIsLoading(true);
       
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
+      const { error } = await supabase
+        .from('pomodoro_sessions')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
+        
+      if (error) {
+        throw error;
       }
+      
+      // Update local state
+      const updatedSessions = sessions.filter(session => session.id !== id);
+      setSessions(updatedSessions);
+      
+      // If the current session is being deleted, set the first available session as current
+      if (currentSession && currentSession.id === id) {
+        const newCurrentSession = updatedSessions[0];
+        setCurrentSession(newCurrentSession);
+        setTimeRemaining(newCurrentSession.workDuration * 60);
+        setTimerStatus("idle");
+        
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+        }
+      }
+      
+      toast.success("Pomodoro session deleted successfully");
+    } catch (error) {
+      console.error("Error deleting pomodoro session:", error);
+      toast.error("Failed to delete pomodoro session");
+    } finally {
+      setIsLoading(false);
     }
   };
 

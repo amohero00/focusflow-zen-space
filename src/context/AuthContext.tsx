@@ -1,5 +1,8 @@
 
 import React, { createContext, useState, useContext, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import { User as SupabaseUser } from '@supabase/supabase-js';
+import { toast } from "sonner";
 
 // Types
 type User = {
@@ -14,21 +17,11 @@ type AuthContextType = {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, name: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 };
 
 // Create context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// Mock user data (replace with actual backend later)
-const mockUsers = [
-  {
-    id: "1",
-    email: "demo@example.com",
-    name: "Demo User",
-    password: "password123"
-  }
-];
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -36,69 +29,153 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Check for existing session on load
   useEffect(() => {
-    const checkAuth = () => {
-      const storedUser = localStorage.getItem("focusflow_user");
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+    const checkAuth = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Get session
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          await handleUserLoggedIn(session.user);
+        }
+      } catch (error) {
+        console.error("Auth session check error:", error);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          await handleUserLoggedIn(session.user);
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+        }
+      }
+    );
+
     checkAuth();
+
+    // Cleanup subscription
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
+
+  // Helper to handle user data after login/signup
+  const handleUserLoggedIn = async (supabaseUser: SupabaseUser) => {
+    try {
+      // Get user profile
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', supabaseUser.id)
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      if (profile) {
+        setUser({
+          id: profile.id,
+          email: profile.email,
+          name: profile.name
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+    }
+  };
 
   // Auth functions
   const login = async (email: string, password: string) => {
-    // Simulate API call delay
-    setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    // This would be replaced with actual API call
-    const foundUser = mockUsers.find(u => u.email === email && u.password === password);
-    
-    if (!foundUser) {
+    try {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast.success("Logged in successfully");
+    } catch (error: any) {
+      toast.error(error.message || "Login failed");
+      throw error;
+    } finally {
       setIsLoading(false);
-      throw new Error("Invalid email or password");
     }
-
-    const { password: _, ...userWithoutPassword } = foundUser;
-    
-    localStorage.setItem("focusflow_user", JSON.stringify(userWithoutPassword));
-    setUser(userWithoutPassword);
-    setIsLoading(false);
   };
 
   const signup = async (email: string, name: string, password: string) => {
-    // Simulate API call delay
-    setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    // Check if user already exists
-    if (mockUsers.some(u => u.email === email)) {
+    try {
+      setIsLoading(true);
+      
+      // Create auth user
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name
+          }
+        }
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data.user) {
+        // Create profile
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            email: email,
+            name: name,
+            created_at: new Date().toISOString()
+          });
+          
+        if (profileError) {
+          throw profileError;
+        }
+        
+        toast.success("Account created successfully");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Signup failed");
+      throw error;
+    } finally {
       setIsLoading(false);
-      throw new Error("User with this email already exists");
     }
-
-    // In a real app, this would be handled by the backend
-    const newUser = {
-      id: String(mockUsers.length + 1),
-      email,
-      name,
-      password
-    };
-    
-    // Add to mock data (in real app, this would be saved to database)
-    mockUsers.push(newUser);
-    
-    const { password: _, ...userWithoutPassword } = newUser;
-    localStorage.setItem("focusflow_user", JSON.stringify(userWithoutPassword));
-    setUser(userWithoutPassword);
-    setIsLoading(false);
   };
 
-  const logout = () => {
-    localStorage.removeItem("focusflow_user");
-    setUser(null);
+  const logout = async () => {
+    try {
+      setIsLoading(true);
+      
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        throw error;
+      }
+      
+      setUser(null);
+      toast.success("Logged out successfully");
+    } catch (error: any) {
+      toast.error(error.message || "Logout failed");
+      console.error("Logout error:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
