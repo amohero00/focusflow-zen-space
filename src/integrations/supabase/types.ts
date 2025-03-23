@@ -9,7 +9,103 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      pomodoro_sessions: {
+        Row: {
+          break_duration: number
+          created_at: string
+          id: string
+          name: string
+          user_id: string
+          work_duration: number
+        }
+        Insert: {
+          break_duration: number
+          created_at?: string
+          id?: string
+          name: string
+          user_id: string
+          work_duration: number
+        }
+        Update: {
+          break_duration?: number
+          created_at?: string
+          id?: string
+          name?: string
+          user_id?: string
+          work_duration?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pomodoro_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      tasks: {
+        Row: {
+          category: string
+          completed: boolean
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          completed?: boolean
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          completed?: boolean
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
