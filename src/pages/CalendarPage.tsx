@@ -1,25 +1,21 @@
 
-import React from 'react';
-import { PageTransition } from '@/components/layout/PageTransition';
-import { CalendarView } from '@/components/calendar/Calendar';
-import Navbar from '@/components/layout/Navbar';
-import { useAuth } from '@/context/AuthContext';
-import { Navigate } from 'react-router-dom';
+import { PageTransition } from "@/components/layout/PageTransition";
+import { CalendarView } from "@/components/calendar/Calendar";
+import { Navbar } from "@/components/layout/Navbar";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const CalendarPage = () => {
-  const { isAuthenticated } = useAuth();
-
-  if (!isAuthenticated) {
-    return <Navigate to="/auth" />;
-  }
-
+  const isMobile = useIsMobile();
+  
   return (
-    <PageTransition>
+    <>
       <Navbar />
-      <div className="page-container">
-        <CalendarView />
-      </div>
-    </PageTransition>
+      <main className={`container ${isMobile ? 'px-2 py-4' : 'py-8'}`}>
+        <PageTransition>
+          <CalendarView />
+        </PageTransition>
+      </main>
+    </>
   );
 };
 

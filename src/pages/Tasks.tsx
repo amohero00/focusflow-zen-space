@@ -1,29 +1,27 @@
 
-import React from 'react';
-import { PageTransition } from '@/components/layout/PageTransition';
-import { TaskList } from '@/components/tasks/TaskList';
-import Navbar from '@/components/layout/Navbar';
-import { useAuth } from '@/context/AuthContext';
-import { Navigate } from 'react-router-dom';
+import { PageTransition } from "@/components/layout/PageTransition";
+import { TaskList } from "@/components/tasks/TaskList";
+import { Navbar } from "@/components/layout/Navbar";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Tasks = () => {
-  const { isAuthenticated, isLoading } = useAuth();
-
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/auth" />;
-  }
-
+  const isMobile = useIsMobile();
+  
   return (
-    <PageTransition>
+    <>
       <Navbar />
-      <div className="page-container">
-        <TaskList />
-      </div>
-    </PageTransition>
+      <main className={`container ${isMobile ? 'px-2 py-4' : 'py-8'}`}>
+        <PageTransition>
+          <div className="mb-6">
+            <h1 className={`${isMobile ? 'text-2xl' : 'text-3xl'} font-display font-semibold`}>Task Management</h1>
+            <p className="text-muted-foreground mt-1">
+              Create, organize, and track your tasks
+            </p>
+          </div>
+          <TaskList />
+        </PageTransition>
+      </main>
+    </>
   );
 };
 

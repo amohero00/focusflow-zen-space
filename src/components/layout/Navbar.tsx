@@ -1,22 +1,20 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
-import { Menu, X, LogOut, User } from "lucide-react";
-import { Logo, LogoText } from "@/assets/logo";
+import { LogoText } from "@/assets/logo";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  CalendarDays,
+  CheckSquare,
+  Clock,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  User,
+  X
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,132 +23,171 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useIsMobile } from "@/hooks/use-mobile";
 
-const Navbar = () => {
-  const { user, logout } = useAuth();
-  const location = useLocation();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const isMobile = useIsMobile();
+interface NavItemProps {
+  to: string;
+  label: string;
+  icon: React.ReactNode;
+  isActive: boolean;
+}
 
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
-  };
-
+const NavItem: React.FC<NavItemProps> = ({ to, label, icon, isActive }) => {
   return (
-    <div className="border-b bg-secondary">
-      <div className="flex h-16 items-center px-4">
-        {isMobile ? (
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="sm" className="mr-2">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-full sm:w-64">
-              <SheetHeader className="text-left">
-                <SheetTitle>Menu</SheetTitle>
-              </SheetHeader>
-              <div className="py-4">
-                <Link to="/" className="block py-2 px-4 hover:bg-accent rounded-md">
-                  Dashboard
-                </Link>
-                <Link to="/tasks" className="block py-2 px-4 hover:bg-accent rounded-md">
-                  Tasks
-                </Link>
-                <Link to="/pomodoro" className="block py-2 px-4 hover:bg-accent rounded-md">
-                  Pomodoro
-                </Link>
-                <Link to="/calendar" className="block py-2 px-4 hover:bg-accent rounded-md">
-                  Calendar
-                </Link>
-              </div>
-            </SheetContent>
-          </Sheet>
-        ) : null}
-
-        <div className="container flex items-center justify-between">
-          <Link to="/" className="flex items-center">
-            <LogoText showTagline={!isMobile} />
-          </Link>
-          {user ? (
-            <div className="flex items-center gap-4">
-              {!isMobile && (
-                <div className="hidden md:flex items-center gap-4">
-                  <Link
-                    to="/"
-                    className={`py-2 px-4 rounded-md hover:bg-accent ${location.pathname === "/" ? "bg-accent text-accent-foreground" : ""
-                      }`}
-                  >
-                    Dashboard
-                  </Link>
-                  <Link
-                    to="/tasks"
-                    className={`py-2 px-4 rounded-md hover:bg-accent ${location.pathname === "/tasks" ? "bg-accent text-accent-foreground" : ""
-                      }`}
-                  >
-                    Tasks
-                  </Link>
-                  <Link
-                    to="/pomodoro"
-                    className={`py-2 px-4 rounded-md hover:bg-accent ${location.pathname === "/pomodoro" ? "bg-accent text-accent-foreground" : ""
-                      }`}
-                  >
-                    Pomodoro
-                  </Link>
-                  <Link
-                    to="/calendar"
-                    className={`py-2 px-4 rounded-md hover:bg-accent ${location.pathname === "/calendar" ? "bg-accent text-accent-foreground" : ""
-                      }`}
-                  >
-                    Calendar
-                  </Link>
-                </div>
-              )}
-
-              <TooltipProvider>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <TooltipTrigger>
-                      <Button variant="ghost" className="h-8 w-8 p-0 rounded-full">
-                        <User className="h-4 w-4" />
-                        <span className="sr-only">Open user menu</span>
-                      </Button>
-                    </TooltipTrigger>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem disabled>
-                      <User className="mr-2 h-4 w-4" />
-                      <span>{user.email}</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() => {
-                        logout();
-                      }}
-                    >
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>Log out</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TooltipProvider>
-            </div>
-          ) : (
-            <div>
-              {location.pathname !== "/auth" && (
-                <Link to="/auth">
-                  <Button>Login</Button>
-                </Link>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+    <Link
+      to={to}
+      className={cn(
+        "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all",
+        isActive
+          ? "bg-primary text-primary-foreground"
+          : "text-foreground/80 hover:bg-accent hover:text-foreground"
+      )}
+    >
+      {icon}
+      <span>{label}</span>
+    </Link>
   );
 };
 
-export default Navbar;
+export const Navbar: React.FC = () => {
+  const { user, logout } = useAuth();
+  const location = useLocation();
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Close mobile menu when changing routes
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  const navItems = [
+    {
+      to: "/",
+      label: "Dashboard",
+      icon: <LayoutDashboard size={18} />,
+    },
+    {
+      to: "/tasks",
+      label: "Tasks",
+      icon: <CheckSquare size={18} />,
+    },
+    {
+      to: "/pomodoro",
+      label: "Pomodoro",
+      icon: <Clock size={18} />,
+    },
+    {
+      to: "/calendar",
+      label: "Calendar",
+      icon: <CalendarDays size={18} />,
+    },
+  ];
+
+  return (
+    <header
+      className={cn(
+        "sticky top-0 z-40 w-full transition-all duration-200",
+        isScrolled
+          ? "bg-background/80 backdrop-blur-md border-b"
+          : "bg-background"
+      )}
+    >
+      <div className="container flex h-16 items-center justify-between">
+        <div className="flex items-center gap-6">
+          <Link to="/" className="flex items-center gap-2">
+            <LogoText />
+          </Link>
+
+          {/* Desktop navigation */}
+          <nav className="hidden md:flex items-center gap-1">
+            {navItems.map((item) => (
+              <NavItem
+                key={item.to}
+                to={item.to}
+                label={item.label}
+                icon={item.icon}
+                isActive={location.pathname === item.to}
+              />
+            ))}
+          </nav>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {user ? (
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    <User size={16} />
+                    <span className="hidden sm:inline-block">
+                      {user.name}
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onClick={() => logout()}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button asChild variant="ghost" size="sm">
+                <Link to="/auth?mode=login">Log in</Link>
+              </Button>
+              <Button asChild size="sm">
+                <Link to="/auth?mode=signup">Sign up</Link>
+              </Button>
+            </div>
+          )}
+
+          {/* Mobile menu button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          </Button>
+        </div>
+      </div>
+
+      {/* Mobile navigation */}
+      {mobileMenuOpen && (
+        <div className="md:hidden border-t">
+          <nav className="container py-3 flex flex-col gap-1 animate-slide-down">
+            {navItems.map((item) => (
+              <NavItem
+                key={item.to}
+                to={item.to}
+                label={item.label}
+                icon={item.icon}
+                isActive={location.pathname === item.to}
+              />
+            ))}
+          </nav>
+        </div>
+      )}
+    </header>
+  );
+};
