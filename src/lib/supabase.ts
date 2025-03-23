@@ -86,17 +86,17 @@ export type Database = {
   };
 };
 
-// Create a single supabase client for interacting with your database
-// Use environment variables with fallback values for development
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://xyzcompany.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh5emNvbXBhbnkiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTYwMDAwMDAwMCwiZXhwIjoxNjAwMDAwMDAwfQ.MEIYYcPbA-0GiZSTrXvwefnmEGKvDPpP_iRBEKqi7jg';
+// Using the actual Supabase project values
+const supabaseUrl = "https://xuaaemwhuucjgkuwgjmh.supabase.co";
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1YWFlbXdodXVjamdrdXdnam1oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2Mzg1NjMsImV4cCI6MjA1ODIxNDU2M30.C0g4OZ_Ej5czkOXPMoHvkNCKZiot9EJ81l6sk4Kd8aM";
 
-// Log a warning but don't prevent app from loading
-if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-  console.warn("Supabase credentials are using fallback values. For production, please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment variables.");
-}
-
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    storage: localStorage
+  }
+});
 
 export function getClient(): SupabaseClient<Database> {
   return supabase;
