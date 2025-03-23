@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LogoText } from "@/assets/logo";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface AuthFormProps {
   mode: "login" | "signup";
@@ -19,32 +21,30 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode, onToggleMode }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     
     try {
       if (mode === "login") {
         await login(email, password);
-        toast({
-          title: "Welcome back!",
-          description: "You've successfully logged in.",
-        });
+        navigate("/");
       } else {
         await signup(email, name, password);
-        toast({
-          title: "Account created!",
-          description: "Your account has been successfully created.",
-        });
+        navigate("/");
       }
-      navigate("/");
     } catch (error) {
-      toast({
-        title: "Authentication error",
-        description: error instanceof Error ? error.message : "An error occurred",
-        variant: "destructive",
-      });
+      console.error("Auth error:", error);
+      if (error instanceof TypeError && error.message === "Failed to fetch") {
+        setError("Unable to connect to the authentication service. If you're using a development environment, please check your Supabase configuration in .env.local file.");
+      } else if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError("An unexpected error occurred");
+      }
     }
   };
 
@@ -64,6 +64,13 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode, onToggleMode }) => {
         <h2 className="text-2xl font-display font-semibold mb-6 text-center">
           {mode === "login" ? "Welcome Back" : "Create an Account"}
         </h2>
+        
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
         
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === "signup" && (
@@ -142,15 +149,18 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode, onToggleMode }) => {
         </div>
       </div>
       
-      {/* Demo account */}
-      {mode === "login" && (
-        <div className="mt-4 text-sm text-center text-muted-foreground">
-          <p>
+      {/* Demo account and development note */}
+      <div className="mt-4 text-sm text-center space-y-1">
+        {mode === "login" && (
+          <p className="text-muted-foreground">
             Demo account: <span className="font-medium">demo@example.com</span> / 
             <span className="font-medium"> password123</span>
           </p>
-        </div>
-      )}
+        )}
+        <p className="text-muted-foreground">
+          <span className="font-medium">Note:</span> In development, Supabase needs valid API keys in a <code>.env.local</code> file
+        </p>
+      </div>
     </motion.div>
   );
 };

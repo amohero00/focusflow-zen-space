@@ -64,6 +64,20 @@ This project uses Supabase for backend services. You need to configure the follo
 
 You can add these to a `.env.local` file in the root of your project or set them directly in your environment.
 
+### Important Setup Notes
+
+1. **Create a Supabase Account**: Visit [Supabase](https://supabase.com/) and create an account if you don't have one.
+2. **Create a New Project**: Set up a new project in Supabase.
+3. **Get Your API Keys**: In your Supabase project dashboard, go to Project Settings → API to find your URL and anon key.
+4. **Set Up Environment Variables**: Create a `.env.local` file in your project root directory and add:
+   ```
+   VITE_SUPABASE_URL=your_supabase_url
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
+5. **Initialize Database**: The application needs specific tables. You can use the SQL script in `supabase/migrations` to set up your database.
+
+Without valid Supabase credentials, authentication and data features will not work properly.
+
 ## What technologies are used for this project?
 
 This project is built with .

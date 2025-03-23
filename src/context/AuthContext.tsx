@@ -41,6 +41,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (error) {
         console.error("Auth session check error:", error);
+        const message = error instanceof Error ? error.message : "Failed to connect to authentication service";
+        
+        // Only show a toast if it's not a network error during initial load
+        if (!(error instanceof TypeError && error.message === "Failed to fetch")) {
+          toast.error(message);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -107,7 +113,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       toast.success("Logged in successfully");
     } catch (error: any) {
-      toast.error(error.message || "Login failed");
+      // Check if it's a network error (Failed to fetch)
+      if (error instanceof TypeError && error.message === "Failed to fetch") {
+        toast.error("Unable to connect to authentication service. Please check your Supabase configuration.");
+        console.error("Connection error. If you're in development mode, make sure to set up your .env.local file with valid Supabase credentials.");
+      } else {
+        toast.error(error.message || "Login failed");
+      }
       throw error;
     } finally {
       setIsLoading(false);
@@ -151,7 +163,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toast.success("Account created successfully");
       }
     } catch (error: any) {
-      toast.error(error.message || "Signup failed");
+      // Check if it's a network error (Failed to fetch)
+      if (error instanceof TypeError && error.message === "Failed to fetch") {
+        toast.error("Unable to connect to authentication service. Please check your Supabase configuration.");
+        console.error("Connection error. If you're in development mode, make sure to set up your .env.local file with valid Supabase credentials.");
+      } else {
+        toast.error(error.message || "Signup failed");
+      }
       throw error;
     } finally {
       setIsLoading(false);
@@ -171,7 +189,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
       toast.success("Logged out successfully");
     } catch (error: any) {
-      toast.error(error.message || "Logout failed");
+      // Check if it's a network error (Failed to fetch)
+      if (error instanceof TypeError && error.message === "Failed to fetch") {
+        toast.error("Unable to connect to authentication service. Please check your Supabase configuration.");
+        console.error("Connection error. If you're in development mode, make sure to set up your .env.local file with valid Supabase credentials.");
+      } else {
+        toast.error(error.message || "Logout failed");
+      }
       console.error("Logout error:", error);
     } finally {
       setIsLoading(false);
