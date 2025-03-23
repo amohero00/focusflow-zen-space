@@ -1,6 +1,7 @@
+
 import React from 'react';
-import PageTransition from '@/components/layout/PageTransition';
-import TaskList from '@/components/tasks/TaskList';
+import { PageTransition } from '@/components/layout/PageTransition';
+import { TaskList } from '@/components/tasks/TaskList';
 import Navbar from '@/components/layout/Navbar';
 import { useAuth } from '@/context/AuthContext';
 import { Navigate } from 'react-router-dom';

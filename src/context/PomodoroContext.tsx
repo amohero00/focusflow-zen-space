@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -14,6 +13,13 @@ export type PomodoroSession = {
   work_duration: number;
   break_duration: number;
   created_at: string;
+};
+
+export type PomodoroSessionInput = {
+  work_duration: number;
+  break_duration: number;
+  completed: boolean;
+  name?: string;
 };
 
 export type PomodoroContextType = {
@@ -34,6 +40,7 @@ export type PomodoroContextType = {
   pauseTimer: () => void;
   resetTimer: () => void;
   skipTimer: () => void;
+  addSession: (session: PomodoroSessionInput) => Promise<void>;
 };
 
 const PomodoroContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -49,7 +56,6 @@ const PomodoroContextProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [workSound, setWorkSound] = useState<HTMLAudioElement | null>(null);
   const [breakSound, setBreakSound] = useState<HTMLAudioElement | null>(null);
   
-  // Initialize audio elements
   useEffect(() => {
     const workAudio = new Audio('/sounds/work-complete.mp3');
     const breakAudio = new Audio('/sounds/break-complete.mp3');
@@ -62,7 +68,6 @@ const PomodoroContextProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
   }, []);
 
-  // Calculate progress as a percentage
   const progress = currentSession 
     ? Math.round(
         ((timerStatus === 'work' 
@@ -74,7 +79,6 @@ const PomodoroContextProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       )
     : 0;
 
-  // Fetch sessions from Supabase
   const fetchSessions = async () => {
     if (!user) return;
     
@@ -90,7 +94,6 @@ const PomodoroContextProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       
       setSessions(data || []);
       
-      // Set default session if none is currently selected
       if (data && data.length > 0 && !currentSession) {
         setCurrentSession(data[0]);
         setTimeRemaining(data[0].work_duration * 60);
@@ -107,7 +110,6 @@ const PomodoroContextProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  // Create a new session
   const createSession = async (name: string, workDuration: number, breakDuration: number) => {
     if (!user) {
       navigate('/auth');
@@ -136,7 +138,6 @@ const PomodoroContextProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         description: 'Pomodoro session created',
       });
       
-      // Automatically set as current session
       setCurrentSession(data);
       setTimeRemaining(data.work_duration * 60);
       setTimerStatus('idle');
@@ -150,7 +151,6 @@ const PomodoroContextProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  // Delete a session
   const deleteSession = async (id: string) => {
     try {
       const { error } = await supabase
@@ -162,7 +162,6 @@ const PomodoroContextProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       
       setSessions(prev => prev.filter(session => session.id !== id));
       
-      // If deleted session was the current one, set to null or first available
       if (currentSession && currentSession.id === id) {
         const nextSession = sessions.find(session => session.id !== id);
         setCurrentSession(nextSession || null);
@@ -190,19 +189,48 @@ const PomodoroContextProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  // Timer logic
+  const addSession = async (session: PomodoroSessionInput) => {
+    if (!user) {
+      return;
+    }
+    
+    try {
+      const { data, error } = await supabase
+        .from('pomodoro_sessions')
+        .insert([
+          {
+            user_id: user.id,
+            name: session.name || 'Completed Session',
+            work_duration: session.work_duration,
+            break_duration: session.break_duration,
+          }
+        ])
+        .select('*')
+        .single();
+        
+      if (error) throw error;
+      
+      setSessions(prev => [data, ...prev]);
+      
+    } catch (error: any) {
+      console.error('Error recording pomodoro session:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to record pomodoro session',
+        variant: 'destructive',
+      });
+    }
+  };
+
   useEffect(() => {
     if (isActive && timeRemaining > 0) {
       timerRef.current = window.setTimeout(() => {
         setTimeRemaining(prev => prev - 1);
       }, 1000);
     } else if (isActive && timeRemaining === 0) {
-      // Timer completed
       if (timerStatus === 'work') {
-        // Work timer completed, switch to break
         if (workSound) workSound.play();
         
-        // Send browser notification
         if ('Notification' in window && Notification.permission === 'granted') {
           try {
             new Notification('Work session completed!', {
@@ -219,10 +247,8 @@ const PomodoroContextProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           setTimeRemaining(currentSession.break_duration * 60);
         }
       } else {
-        // Break timer completed, switch to work
         if (breakSound) breakSound.play();
         
-        // Send browser notification
         if ('Notification' in window && Notification.permission === 'granted') {
           try {
             new Notification('Break completed!', {
@@ -246,7 +272,6 @@ const PomodoroContextProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
   }, [isActive, timeRemaining, timerStatus, currentSession, workSound, breakSound]);
 
-  // Load sessions when user is authenticated
   useEffect(() => {
     if (user) {
       fetchSessions();
@@ -255,13 +280,11 @@ const PomodoroContextProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setCurrentSession(null);
     }
     
-    // Request notification permission
     if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
       Notification.requestPermission();
     }
   }, [user]);
 
-  // Timer controls
   const startTimer = () => {
     if (!currentSession) return;
     
@@ -319,6 +342,7 @@ const PomodoroContextProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     pauseTimer,
     resetTimer,
     skipTimer,
+    addSession,
   };
 
   return (
@@ -328,10 +352,8 @@ const PomodoroContextProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   );
 };
 
-// Create the context
 const PomodoroContext = createContext<PomodoroContextType | null>(null);
 
-// Hook for easy context use
 export const usePomodoroContext = () => {
   const context = useContext(PomodoroContext);
   if (!context) {

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { usePomodoroContext } from '@/context/PomodoroContext';
@@ -115,7 +116,8 @@ const PomodoroTimer = () => {
       addSession({
         work_duration: workMinutes,
         break_duration: breakMinutes,
-        completed: true
+        completed: true,
+        name: isWorkMode ? 'Work Session' : 'Break Session'
       });
     }
 

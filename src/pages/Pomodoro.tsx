@@ -1,5 +1,6 @@
+
 import React from 'react';
-import PageTransition from '@/components/layout/PageTransition';
+import { PageTransition } from '@/components/layout/PageTransition';
 import PomodoroTimer from '@/components/pomodoro/PomodoroTimer';
 import Navbar from '@/components/layout/Navbar';
 import { useAuth } from '@/context/AuthContext';

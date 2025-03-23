@@ -1,5 +1,6 @@
+
 import React from 'react';
-import PageTransition from '@/components/layout/PageTransition';
+import { PageTransition } from '@/components/layout/PageTransition';
 import Dashboard from '@/components/dashboard/Dashboard';
 import Navbar from '@/components/layout/Navbar';
 import { useAuth } from '@/context/AuthContext';
