@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useTaskContext } from '@/context/TaskContext';
+import { useTasks } from '@/context/TaskContext';
 import { usePomodoroContext } from '@/context/PomodoroContext';
 import { useAuth } from '@/context/AuthContext';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
@@ -126,7 +126,7 @@ const RecentActivity = ({ tasks }: { tasks: any[] }) => {
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { tasks, isLoading: tasksLoading } = useTaskContext();
+  const { tasks, isLoading: tasksLoading } = useTasks();
   const { sessions, isLoading: sessionsLoading } = usePomodoroContext();
   const [completionData, setCompletionData] = useState<any[]>([]);
   const [categoryData, setCategoryData] = useState<any[]>([]);

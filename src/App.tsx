@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import { TaskProvider } from "@/context/TaskContext";
-import { PomodoroProvider } from "@/context/PomodoroContext";
+import { PomodoroContextProvider } from "@/context/PomodoroContext";
 import { AnimatePresence } from "framer-motion";
 
 import Index from "./pages/Index";
@@ -23,7 +23,7 @@ const App = () => (
     <TooltipProvider>
       <AuthProvider>
         <TaskProvider>
-          <PomodoroProvider>
+          <PomodoroContextProvider>
             <Toaster />
             <Sonner />
             <BrowserRouter>
@@ -38,7 +38,7 @@ const App = () => (
                 </Routes>
               </AnimatePresence>
             </BrowserRouter>
-          </PomodoroProvider>
+          </PomodoroContextProvider>
         </TaskProvider>
       </AuthProvider>
     </TooltipProvider>
